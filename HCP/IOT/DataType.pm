@@ -20,13 +20,11 @@ sub get {
         $self->iot_service_url . "/com.sap.iotservices.dms/api/datatypes", undef, undef
     );
 
-    if( $res->is_success ) {
-        return JSON::decode_json $res->content;
-    }
-    else {
-        say $res->status_line, "\n";
-    }
-    return {};
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 no Moose;

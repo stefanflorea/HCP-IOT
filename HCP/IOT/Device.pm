@@ -7,7 +7,7 @@ use JSON;
 package HCP::IOT::Device;
 
 use base 'Exporter';
-our @EXPORT_OK = ('register','get','delete','delete_attribute');
+our @EXPORT_OK = ('register','get','get_attributes','delete','delete_attribute','update','renew_token');
 
 use Moose;
 extends 'HCP::IOT::Base';
@@ -16,26 +16,18 @@ sub register {
     my $self = shift;
     my( $params ) = @_;
 
-    if( defined $params ) {
-        say HCP::IOT::Base::build_json_request( $params );
-        my $res = $self->send_request(
-            "POST",
-            $self->iot_service_url . "/com.sap.iotservices.dms/api/devices",
-            "application/json;charset=utf-8",
-            HCP::IOT::Base::build_json_request( $params ),
-        );
+    my $res = $self->send_request(
+        "POST",
+        $self->iot_service_url . "/com.sap.iotservices.dms/api/devices",
+        "application/json;charset=utf-8",
+        HCP::IOT::Base::build_json_request( $params ),
+    );
 
-        if( $res->is_success ) {
-            say $res->content;
-            return JSON::decode_json $res->content;
-        }
-        else {
-            say $res->content;
-            say $res->status_line, "\n";
-        }
-    }
-
-    return {};
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 sub get {
@@ -50,13 +42,30 @@ sub get {
 
     my $res = $self->send_request("GET", $self->iot_service_url, undef, undef);
 
-    if( $res->is_success ) {
-        return JSON::decode_json $res->content;
-    } else {
-        say $res->status_line, "\n";
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
+}
+
+sub get_attributes {
+    my $self = shift;
+    my $device_id = shift;
+
+    if( !defined $device_id ) {
+        return {};
     }
 
-    return {};
+    $self->iot_service_url( $self->iot_service_url . "/com.sap.iotservices.dms/api/devices/$device_id/attributes" ); 
+
+    my $res = $self->send_request("GET", $self->iot_service_url, undef, undef);
+
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 sub delete {
@@ -81,6 +90,49 @@ sub delete_attribute {
 
     my $res = $self->send_request("DELETE", $self->iot_service_url . "/com.sap.iotservices.dms/api/devices/$device_id/attributes/$attribute_key", undef, undef);
     return $res->is_success;
+}
+
+sub update {
+    my $self = shift;
+    my( $device_id, $params ) = @_;
+
+    if( !defined $device_id || !defined $params ) {
+        return {};
+    }
+
+    my $res = $self->send_request(
+        "PATCH",
+        $self->iot_service_url . "/com.sap.iotservices.dms/api/devices/$device_id/attributes",
+        "application/json;charset=utf-8",
+        HCP::IOT::Base::build_json_request( $params )
+    );
+
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
+}
+
+sub renew_token {
+    my $self = shift;
+    my $device_id = shift;
+
+    if( !defined $device_id ) {
+        return {};
+    }
+
+    my $res = $self->send_request(
+        "POST",
+        $self->iot_service_url . "/com.sap.iotservices.dms/api/devices/$device_id/authentication/token",
+        undef, undef
+    );
+
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 no Moose;

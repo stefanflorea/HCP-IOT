@@ -14,23 +14,20 @@ extends 'HCP::IOT::Base';
 
 sub register {
     my $self = shift;
-    my( $name, $link ) = @_;
+    my( $params ) = @_;
 
     my $res = $self->send_request(
         "POST",
         $self->iot_service_url . "/com.sap.iotservices.dms/api/devicetypes",
         "application/json;charset=utf-8",
-        build_json_request({ name => $name, link => $link })
+        HCP::IOT::Base::build_json_request( $params )
     );
 
-    # Check the outcome of the response
-    if ($res->is_success) {
-        return JSON::decode_json $res->content;
-    }
-    else {
-        say $res->status_line, "\n";
-    }
-    return {};
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 sub get {
@@ -45,14 +42,11 @@ sub get {
 
     my $res = $self->send_request("GET", $self->iot_service_url, undef, undef);
 
-    # Check the outcome of the response
-    if ($res->is_success) {
-        return JSON::decode_json $res->content;
-    }
-    else {
-        say $res->status_line, "\n";
-    }
-    return {};
+    return {
+        success => $res->is_success,
+        status_line => defined $res->status_line ? $res->status_line : undef,
+        content => JSON::decode_json $res->content
+    };
 }
 
 sub delete {
@@ -89,9 +83,11 @@ sub change_auth {
             "application/json;charset=utf-8",
             build_json_request({ type => $auth_type })
         );
-        if( $res->is_success ) {
-            return JSON::decode_json $res->content;
-        } 
+        return {
+            success => $res->is_success,
+            status_line => defined $res->status_line ? $res->status_line : undef,
+            content => JSON::decode_json $res->content
+        };
     }
 
     return {};
@@ -99,5 +95,4 @@ sub change_auth {
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
-
 
